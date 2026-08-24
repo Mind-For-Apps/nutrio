@@ -38,6 +38,37 @@ function FieldControl({ field }: { field: Field }) {
     );
   }
 
+  if (field.type === "yesno") {
+    return (
+      <div>
+        <div className="flex gap-3">
+          {["Да", "Нет"].map((opt) => (
+            <label
+              key={opt}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-700 transition has-[:checked]:border-teal has-[:checked]:bg-mint/15 has-[:checked]:text-teal sm:flex-none sm:min-w-24"
+            >
+              <input
+                type="radio"
+                name={field.id}
+                value={opt}
+                className="h-4 w-4 accent-teal"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+        {field.detail && (
+          <textarea
+            name={`${field.id}__detail`}
+            rows={2}
+            placeholder="Если да — уточните (по желанию)"
+            className={`${base} mt-2 resize-y`}
+          />
+        )}
+      </div>
+    );
+  }
+
   if (field.type === "radio") {
     return (
       <div className="flex flex-col gap-2">
@@ -105,6 +136,14 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
           const other = String(fd.get(`${field.id}__other`) ?? "").trim();
           if (other) values.push(other);
           if (values.length) answers[field.id] = values.join(", ");
+        } else if (field.type === "yesno") {
+          const choice = String(fd.get(field.id) ?? "").trim();
+          const detail = field.detail
+            ? String(fd.get(`${field.id}__detail`) ?? "").trim()
+            : "";
+          const value =
+            choice && detail ? `${choice} — ${detail}` : choice || detail;
+          if (value) answers[field.id] = value;
         } else {
           const value = String(fd.get(field.id) ?? "").trim();
           if (value) answers[field.id] = value;
