@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nutrio — анкета первичной консультации
 
-## Getting Started
+Веб-приложение на Next.js: посетитель выбирает анкету (женское / мужское здоровье),
+заполняет её и отправляет. Заполненная анкета приходит письмом нутрициологу.
 
-First, run the development server:
+## Стек
+
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS 4
+- Nodemailer (отправка анкеты по SMTP)
+
+## Структура
+
+- `src/app/page.tsx` — главная: hero-баннер и выбор анкеты
+- `src/app/anketa/female` и `src/app/anketa/male` — страницы анкет
+- `src/components/QuestionnaireForm.tsx` — форма анкеты
+- `src/lib/questionnaire.ts` — все вопросы (единый источник; мужской вариант —
+  та же схема без блока «Женское здоровье» и вопроса про детей/роды)
+- `src/app/api/submit/route.ts` — приём формы и отправка письма
+
+## Локальный запуск
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Откроется на http://localhost:3002
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Настройка отправки почты
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Отправка письма работает через SMTP. Скопируйте `.env.example` в `.env.local`
+и заполните значения:
 
-## Learn More
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Для Gmail нужен **пароль приложения** (App Password), а не обычный пароль:
+включите двухфакторную аутентификацию и создайте пароль на
+https://myaccount.google.com/apppasswords
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+По умолчанию анкеты приходят на `anka.freedom@gmail.com` (переменная `MAIL_TO`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Деплой на Vercel
 
-## Deploy on Vercel
+1. Импортируйте репозиторий на https://vercel.com/new
+2. В **Project Settings → Environment Variables** добавьте те же переменные,
+   что и в `.env.local` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+   `MAIL_TO`, при необходимости `MAIL_FROM`)
+3. Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> Порт 3002 в скриптах влияет только на локальную разработку; на Vercel
+> приложение работает на их инфраструктуре.
