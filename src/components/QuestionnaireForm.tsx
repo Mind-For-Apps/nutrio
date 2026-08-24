@@ -117,6 +117,7 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
   const sections = useMemo(() => getSections(variant), [variant]);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string>("");
+  const [invalidId, setInvalidId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -125,16 +126,48 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
 
     const formEl = e.currentTarget;
 
-    // Нативная проверка обязательных полей (text/textarea/radio/yesno)
-    if (!formEl.checkValidity()) {
-      formEl.reportValidity();
-      setStatus("idle");
-      return;
+    const fd = new FormData(formEl);
+
+    // Своя проверка обязательных полей вместо встроенной в браузер:
+    // reportValidity() в Safari/iOS не показывает подсказку для радио-кнопок
+    // («Да/Нет»), из-за чего кнопка казалась «нерабочей». Ищем первый
+    // незаполненный вопрос, подсвечиваем его и прокручиваем к нему.
+    const isAnswered = (field: Field): boolean => {
+      if (field.type === "checkbox") {
+        const checked =
+          fd.getAll(field.id).map(String).filter(Boolean).length > 0;
+        const other = String(fd.get(`${field.id}__other`) ?? "").trim();
+        return checked || other.length > 0;
+      }
+      return String(fd.get(field.id) ?? "").trim().length > 0;
+    };
+
+    let firstMissing: Field | null = null;
+    for (const section of sections) {
+      const found = section.fields.find(
+        (field) => isFieldRequired(field.id) && !isAnswered(field)
+      );
+      if (found) {
+        firstMissing = found;
+        break;
+      }
     }
 
-    const fd = new FormData(formEl);
-    const answers: Record<string, string> = {};
+    if (firstMissing) {
+      setStatus("idle");
+      setInvalidId(firstMissing.id);
+      setError(
+        "Пожалуйста, ответьте на все обязательные вопросы. Первый пропущенный отмечен красным ниже."
+      );
+      document
+        .getElementById(`field-${firstMissing.id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setInvalidId(null);
 
+    // Сбор ответов
+    const answers: Record<string, string> = {};
     for (const section of sections) {
       for (const field of section.fields) {
         if (field.type === "checkbox") {
@@ -153,26 +186,6 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
         } else {
           const value = String(fd.get(field.id) ?? "").trim();
           if (value) answers[field.id] = value;
-        }
-      }
-    }
-
-    // Проверка обязательных чекбокс-групп: нужно отметить хотя бы один вариант
-    for (const section of sections) {
-      for (const field of section.fields) {
-        if (
-          field.type === "checkbox" &&
-          isFieldRequired(field.id) &&
-          !answers[field.id]
-        ) {
-          setStatus("idle");
-          setError(
-            `Пожалуйста, отметьте хотя бы один вариант: «${field.label}»`
-          );
-          document
-            .getElementById(`field-${field.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-          return;
         }
       }
     }
@@ -238,7 +251,7 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="mt-10 space-y-8" noValidate={false}>
+      <form onSubmit={handleSubmit} className="mt-10 space-y-8" noValidate>
         {sections.map((section) => (
           <section
             key={section.id}
@@ -254,13 +267,25 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
             <div className="mt-6 space-y-6">
               {section.fields.map((field) => {
                 const required = isFieldRequired(field.id);
+                const invalid = invalidId === field.id;
                 return (
-                  <div key={field.id} id={`field-${field.id}`}>
+                  <div
+                    key={field.id}
+                    id={`field-${field.id}`}
+                    className={`scroll-mt-24 ${
+                      invalid ? "rounded-xl bg-rose-50 p-3 ring-2 ring-rose-300" : ""
+                    }`}
+                  >
                     <label className="mb-2 block font-medium text-slate-700">
                       {field.label}
                       {required && <span className="ml-1 text-rose-500">*</span>}
                     </label>
                     <FieldControl field={field} required={required} />
+                    {invalid && (
+                      <p className="mt-2 text-sm font-medium text-rose-600">
+                        Пожалуйста, ответьте на этот вопрос
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -268,7 +293,7 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
           </section>
         ))}
 
-        {status === "error" && (
+        {error && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
