@@ -2,25 +2,28 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1f2d3d;
+
+  /* Nutrio brand palette */
+  --mint: #7dd3c4;
+  --mint-dark: #5cbfae;
+  --teal: #1f5d6c;
+  --teal-deep: #12495a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-mint: var(--mint);
+  --color-mint-dark: var(--mint-dark);
+  --color-teal: var(--teal);
+  --color-teal-deep: var(--teal-deep);
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
 }
