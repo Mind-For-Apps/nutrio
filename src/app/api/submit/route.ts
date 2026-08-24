@@ -4,7 +4,12 @@ import { getSections, variantTitles, type Variant } from "@/lib/questionnaire";
 
 export const runtime = "nodejs";
 
-const MAIL_TO = process.env.MAIL_TO || "anka.freedom@gmail.com";
+// Получатели анкет. Можно указать несколько адресов через запятую в MAIL_TO.
+const MAIL_TO =
+  process.env.MAIL_TO || "anka.freedom@gmail.com, yanadely632@gmail.com";
+const recipients = MAIL_TO.split(",")
+  .map((address) => address.trim())
+  .filter(Boolean);
 
 function escapeHtml(value: string): string {
   return value
@@ -104,7 +109,7 @@ export async function POST(request: Request) {
   try {
     await transporter.sendMail({
       from: MAIL_FROM || SMTP_USER,
-      to: MAIL_TO,
+      to: recipients,
       replyTo: MAIL_FROM || SMTP_USER,
       subject,
       text,
