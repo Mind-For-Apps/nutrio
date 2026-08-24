@@ -28,6 +28,28 @@ export const variantTitles: Record<Variant, string> = {
   male: "Мужское здоровье",
 };
 
+/**
+ * Поля, которые остаются необязательными (по смыслу их нельзя требовать):
+ * дополнительные варианты приёмов пищи, вопрос про менопаузу, особенности
+ * родов и открытый вопрос «есть ли что-то ещё». Все остальные — обязательные.
+ */
+export const optionalFieldIds = new Set<string>([
+  "breakfast2",
+  "breakfast3",
+  "lunch2",
+  "lunch3",
+  "dinner2",
+  "dinner3",
+  "q127",
+  "q130_birth",
+  "extra",
+]);
+
+/** Обязательно ли поле для заполнения. */
+export function isFieldRequired(fieldId: string): boolean {
+  return !optionalFieldIds.has(fieldId);
+}
+
 export const introText = {
   title: "Анкета первичной консультации",
   paragraphs: [

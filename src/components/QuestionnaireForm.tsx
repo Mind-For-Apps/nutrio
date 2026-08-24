@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   getSections,
   introText,
+  isFieldRequired,
   variantTitles,
   type Field,
   type Variant,
@@ -12,18 +13,13 @@ import {
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-function FieldControl({ field }: { field: Field }) {
+function FieldControl({ field, required }: { field: Field; required: boolean }) {
   const base =
     "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 outline-none transition focus:border-teal focus:ring-2 focus:ring-mint/40";
 
   if (field.type === "text") {
     return (
-      <input
-        type="text"
-        name={field.id}
-        required={field.required}
-        className={base}
-      />
+      <input type="text" name={field.id} required={required} className={base} />
     );
   }
 
@@ -31,7 +27,7 @@ function FieldControl({ field }: { field: Field }) {
     return (
       <textarea
         name={field.id}
-        required={field.required}
+        required={required}
         rows={3}
         className={`${base} resize-y`}
       />
@@ -51,6 +47,7 @@ function FieldControl({ field }: { field: Field }) {
                 type="radio"
                 name={field.id}
                 value={opt}
+                required={required}
                 className="h-4 w-4 accent-teal"
               />
               {opt}
@@ -78,6 +75,7 @@ function FieldControl({ field }: { field: Field }) {
               type="radio"
               name={field.id}
               value={opt}
+              required={required}
               className="h-4 w-4 accent-teal"
             />
             {opt}
@@ -126,6 +124,14 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
     setError("");
 
     const formEl = e.currentTarget;
+
+    // Нативная проверка обязательных полей (text/textarea/radio/yesno)
+    if (!formEl.checkValidity()) {
+      formEl.reportValidity();
+      setStatus("idle");
+      return;
+    }
+
     const fd = new FormData(formEl);
     const answers: Record<string, string> = {};
 
@@ -147,6 +153,26 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
         } else {
           const value = String(fd.get(field.id) ?? "").trim();
           if (value) answers[field.id] = value;
+        }
+      }
+    }
+
+    // Проверка обязательных чекбокс-групп: нужно отметить хотя бы один вариант
+    for (const section of sections) {
+      for (const field of section.fields) {
+        if (
+          field.type === "checkbox" &&
+          isFieldRequired(field.id) &&
+          !answers[field.id]
+        ) {
+          setStatus("idle");
+          setError(
+            `Пожалуйста, отметьте хотя бы один вариант: «${field.label}»`
+          );
+          document
+            .getElementById(`field-${field.id}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
         }
       }
     }
@@ -226,15 +252,18 @@ export default function QuestionnaireForm({ variant }: { variant: Variant }) {
             )}
 
             <div className="mt-6 space-y-6">
-              {section.fields.map((field) => (
-                <div key={field.id}>
-                  <label className="mb-2 block font-medium text-slate-700">
-                    {field.label}
-                    {field.required && <span className="ml-1 text-rose-500">*</span>}
-                  </label>
-                  <FieldControl field={field} />
-                </div>
-              ))}
+              {section.fields.map((field) => {
+                const required = isFieldRequired(field.id);
+                return (
+                  <div key={field.id} id={`field-${field.id}`}>
+                    <label className="mb-2 block font-medium text-slate-700">
+                      {field.label}
+                      {required && <span className="ml-1 text-rose-500">*</span>}
+                    </label>
+                    <FieldControl field={field} required={required} />
+                  </div>
+                );
+              })}
             </div>
           </section>
         ))}
